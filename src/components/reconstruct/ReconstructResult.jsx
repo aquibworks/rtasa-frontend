@@ -13,17 +13,40 @@ export default function ReconstructResult({ result }) {
   const mimeType = result.mime_type || 'application/octet-stream';
   const fileDataB64 = result.file_data_b64 || null;
 
-  const rawSecretPayload =
-    result.decrypted_secret_text ||
-    result.secret_text ||
-    result.secret ||
-    result.payload ||
-    result;
+  // Helper: an object is "usable" only if it's not empty.
+  // Strings/numbers/booleans are considered usable if truthy.
+  const isUsable = (v) => {
+    if (v === null || v === undefined) return false;
+    if (typeof v === 'string') return v.trim().length > 0;
+    if (typeof v === 'object') {
+      if (Array.isArray(v)) return v.length > 0;
+      return Object.keys(v).length > 0;
+    }
+    return Boolean(v);
+  };
+
+  // Prefer secret_data (new /verify-and-reconstruct shape), then legacy keys.
+  // Skip any empty {} / "" so we don't render a bogus blank payload.
+  let rawSecretPayload;
+  if (isUsable(result.secret_data)) {
+    rawSecretPayload = result.secret_data;
+  } else if (isUsable(result.decrypted_secret_text)) {
+    rawSecretPayload = result.decrypted_secret_text;
+  } else if (isUsable(result.secret_text)) {
+    rawSecretPayload = result.secret_text;
+  } else if (isUsable(result.secret)) {
+    rawSecretPayload = result.secret;
+  } else if (isUsable(result.payload)) {
+    rawSecretPayload = result.payload;
+  } else {
+    // Nothing usable — show a clear message instead of a JSON dump.
+    rawSecretPayload = '[No secret data returned by the server]';
+  }
 
   const displayText =
     typeof rawSecretPayload === 'object'
       ? JSON.stringify(rawSecretPayload, null, 2)
-      : rawSecretPayload;
+      : String(rawSecretPayload);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(displayText);

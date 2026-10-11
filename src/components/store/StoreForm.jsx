@@ -18,6 +18,7 @@ export default function StoreForm({ backendOnline }) {
   const [thresholdK, setThresholdK] = useState(2);
   const [totalN, setTotalN] = useState(2);
   const [emails, setEmails] = useState(['', '']);
+  const [roles, setRoles] = useState(['Manager', 'Manager']);
   const [coverFiles, setCoverFiles] = useState([null, null]);
 
   // Request status states
@@ -32,6 +33,9 @@ export default function StoreForm({ backendOnline }) {
     const updatedEmails = Array(newN).fill('').map((_, i) => emails[i] || '');
     setEmails(updatedEmails);
 
+    const updatedRoles = Array(newN).fill('Manager').map((_, i) => roles[i] || 'Manager');
+    setRoles(updatedRoles);
+
     const updatedFiles = Array(newN).fill(null).map((_, i) => coverFiles[i] || null);
     setCoverFiles(updatedFiles);
   };
@@ -40,6 +44,12 @@ export default function StoreForm({ backendOnline }) {
     const updated = [...emails];
     updated[index] = value;
     setEmails(updated);
+  };
+
+  const handleRoleChange = (index, value) => {
+    const updated = [...roles];
+    updated[index] = value;
+    setRoles(updated);
   };
 
   const handleSubmit = async (e) => {
@@ -85,9 +95,25 @@ export default function StoreForm({ backendOnline }) {
         formData.append('secret_file', secretFile);
       }
 
-      const filteredEmails = emails.filter((email) => email.trim() !== '');
-      if (filteredEmails.length > 0) {
-        formData.append('recipient_emails_json', JSON.stringify(filteredEmails));
+      // Build recipient list with roles, only for rows that have an email
+      const recipientsWithRoles = emails
+        .map((email, idx) => ({
+          email: email.trim(),
+          role: roles[idx] || 'Manager',
+        }))
+        .filter((r) => r.email !== '');
+
+      if (recipientsWithRoles.length > 0) {
+        // Keep legacy field for backend compatibility
+        formData.append(
+          'recipient_emails_json',
+          JSON.stringify(recipientsWithRoles.map((r) => r.email))
+        );
+        // New field carrying role info
+        formData.append(
+          'authorized_recipients_json',
+          JSON.stringify(recipientsWithRoles)
+        );
       }
 
       for (let i = 0; i < uploadedImages.length; i++) {
@@ -228,21 +254,40 @@ export default function StoreForm({ backendOnline }) {
           </div>
         </div>
 
-        {/* Recipient Emails */}
+        {/* Recipient Emails + Roles */}
         <div>
           <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-2">
-            Recipient Emails (Optional Delivery)
+            Assign Recipient Email & Role per Share (Optional Delivery)
           </label>
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="space-y-3">
             {emails.map((email, idx) => (
-              <input
+              <div
                 key={idx}
-                type="email"
-                placeholder={`Recipient #${idx + 1} Email`}
-                value={email}
-                onChange={(e) => handleEmailChange(idx, e.target.value)}
-                className="bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
-              />
+                className="flex flex-col sm:flex-row gap-2 items-stretch sm:items-center p-3 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-slate-200 dark:border-slate-800"
+              >
+                <span className="text-xs font-semibold text-slate-600 dark:text-slate-400 sm:w-20 shrink-0">
+                  Share #{idx + 1}
+                </span>
+
+                <input
+                  type="email"
+                  placeholder={`recipient${idx + 1}@email.com`}
+                  value={email}
+                  onChange={(e) => handleEmailChange(idx, e.target.value)}
+                  className="flex-1 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900 dark:text-slate-100 placeholder-slate-400"
+                />
+
+                <select
+                  value={roles[idx] || 'Manager'}
+                  onChange={(e) => handleRoleChange(idx, e.target.value)}
+                  className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900 dark:text-slate-100"
+                >
+                  <option value="Manager">Manager</option>
+                  <option value="IT Officer">IT Officer</option>
+                  <option value="Auditor">Auditor</option>
+                  <option value="Admin">Admin</option>
+                </select>
+              </div>
             ))}
           </div>
         </div>
