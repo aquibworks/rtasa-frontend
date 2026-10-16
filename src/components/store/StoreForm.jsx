@@ -6,6 +6,19 @@ import StoreResult from './StoreResult';
 import ErrorBanner from '../common/ErrorBanner';
 import { storeSecret } from '../../api/secrets';
 
+// ---------------------------------------------------------------------
+// CANONICAL ROLE LIST
+// ⚠️ MUST match the list in ReconstructForm.jsx exactly.
+// ---------------------------------------------------------------------
+const ROLE_OPTIONS = [
+  'Manager',
+  'Department Lead',
+  'IT Security Officer',
+  'Auditor',
+  'Admin',
+  'Key Holder',
+];
+
 export default function StoreForm({ backendOnline }) {
   // Mode selection: 'text' or 'file'
   const [secretType, setSecretType] = useState('text');
@@ -18,7 +31,7 @@ export default function StoreForm({ backendOnline }) {
   const [thresholdK, setThresholdK] = useState(2);
   const [totalN, setTotalN] = useState(2);
   const [emails, setEmails] = useState(['', '']);
-  const [roles, setRoles] = useState(['Manager', 'Manager']);
+  const [roles, setRoles] = useState([ROLE_OPTIONS[0], ROLE_OPTIONS[0]]);
   const [coverFiles, setCoverFiles] = useState([null, null]);
 
   // Request status states
@@ -33,7 +46,9 @@ export default function StoreForm({ backendOnline }) {
     const updatedEmails = Array(newN).fill('').map((_, i) => emails[i] || '');
     setEmails(updatedEmails);
 
-    const updatedRoles = Array(newN).fill('Manager').map((_, i) => roles[i] || 'Manager');
+    const updatedRoles = Array(newN)
+      .fill(ROLE_OPTIONS[0])
+      .map((_, i) => roles[i] || ROLE_OPTIONS[0]);
     setRoles(updatedRoles);
 
     const updatedFiles = Array(newN).fill(null).map((_, i) => coverFiles[i] || null);
@@ -95,21 +110,22 @@ export default function StoreForm({ backendOnline }) {
         formData.append('secret_file', secretFile);
       }
 
-      // Build recipient list with roles, only for rows that have an email
+      // Build recipient list with roles, only for rows that have an email.
+      // Roles come from ROLE_OPTIONS, identical to ReconstructForm.
       const recipientsWithRoles = emails
         .map((email, idx) => ({
           email: email.trim(),
-          role: roles[idx] || 'Manager',
+          role: roles[idx] || ROLE_OPTIONS[0],
         }))
         .filter((r) => r.email !== '');
 
       if (recipientsWithRoles.length > 0) {
-        // Keep legacy field for backend compatibility
+        // Legacy field for email dispatch fallback
         formData.append(
           'recipient_emails_json',
           JSON.stringify(recipientsWithRoles.map((r) => r.email))
         );
-        // New field carrying role info
+        // Authoritative field for the 2FA /request-token gate
         formData.append(
           'authorized_recipients_json',
           JSON.stringify(recipientsWithRoles)
@@ -278,14 +294,13 @@ export default function StoreForm({ backendOnline }) {
                 />
 
                 <select
-                  value={roles[idx] || 'Manager'}
+                  value={roles[idx] || ROLE_OPTIONS[0]}
                   onChange={(e) => handleRoleChange(idx, e.target.value)}
                   className="bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-blue-500 text-slate-900 dark:text-slate-100"
                 >
-                  <option value="Manager">Manager</option>
-                  <option value="IT Officer">IT Officer</option>
-                  <option value="Auditor">Auditor</option>
-                  <option value="Admin">Admin</option>
+                  {ROLE_OPTIONS.map((r) => (
+                    <option key={r} value={r}>{r}</option>
+                  ))}
                 </select>
               </div>
             ))}

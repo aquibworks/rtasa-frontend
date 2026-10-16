@@ -5,11 +5,28 @@ import ReconstructResult from './ReconstructResult';
 import ErrorBanner from '../common/ErrorBanner';
 import axios from 'axios';
 
+// ---------------------------------------------------------------------
+// CANONICAL ROLE LIST
+// ---------------------------------------------------------------------
+// ⚠️ IMPORTANT: This exact list MUST also be used in your Store form.
+// If the store form uses different role labels (e.g. "Manager / Director"
+// or "Key Holder / Worker"), /request-token will always return 403,
+// because the backend compares the role strings after lowercasing.
+// ---------------------------------------------------------------------
+const ROLE_OPTIONS = [
+  'Manager',
+  'Department Lead',
+  'IT Security Officer',
+  'Auditor',
+  'Admin',
+  'Key Holder',
+];
+
 export default function ReconstructForm({ backendOnline }) {
   const [step, setStep] = useState(1); // Step 1: Input details & request OTP, Step 2: Enter OTP & Reconstruct
   const [secretId, setSecretId] = useState('');
   const [email, setEmail] = useState('');
-  const [role, setRole] = useState('Manager'); // Role state
+  const [role, setRole] = useState(ROLE_OPTIONS[0]); // Default: "Manager"
   const [token, setToken] = useState('');
   const [stegoFiles, setStegoFiles] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -186,7 +203,7 @@ export default function ReconstructForm({ backendOnline }) {
               />
             </div>
 
-            {/* Role / Clearance Dropdown */}
+            {/* Role / Clearance Dropdown — uses canonical ROLE_OPTIONS list */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
                 <UserCheck className="w-3.5 h-3.5 text-blue-500" /> Authorized Role / Clearance Level
@@ -196,10 +213,11 @@ export default function ReconstructForm({ backendOnline }) {
                 onChange={(e) => setRole(e.target.value)}
                 className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-blue-500 text-slate-900 dark:text-slate-100"
               >
-                <option value="Manager">Manager / Director</option>
-                <option value="Department Lead">Department Lead</option>
-                <option value="IT Security Officer">IT Security Officer</option>
-                <option value="Authorized Holder">Key Holder / Worker</option>
+                {ROLE_OPTIONS.map((r) => (
+                  <option key={r} value={r}>
+                    {r}
+                  </option>
+                ))}
               </select>
             </div>
 
